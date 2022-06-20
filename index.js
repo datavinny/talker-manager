@@ -42,12 +42,21 @@ const arrPPC = [
     talk: { watchedAt: '23/10/2020', rate: 5 },
   },
 ];
-function handleTalkerRequest(req, res) {
-  // const { id } = req.params;
-  // const pessoa = arrPPC.find((p) => p.id === Number(id));
-
+function handleGetAllTalkersRequest(req, res) {
   if (arrPPC.length === 0) return res.status(200).send([]);
   if (arrPPC) return res.status(200).send(arrPPC);
 }
 
-app.get('/talker', handleTalkerRequest);
+app.get('/talker', handleGetAllTalkersRequest);
+
+function handleGetTalkerByIdRequest(req, res) {
+  const { id } = req.params;
+  const pessoa = arrPPC.find((p) => p.id === Number(id));
+  
+  if (pessoa !== undefined) return res.status(200).send(pessoa);
+  if (pessoa === undefined) {
+  return res.status(404).send({ message: 'Pessoa palestrante não encontrada' }); 
+  }
+}
+
+app.get('/talker/:id', handleGetTalkerByIdRequest);
