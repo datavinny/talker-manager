@@ -94,11 +94,21 @@ const verificarCredenciais = (email, password) => {
   return mensagensLogin[5];
 };
 
+function generateToken(n) {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let token = '';
+  for (let i = 0; i < n; i += 1) {
+    token += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return token;
+  // credits: https://stackoverflow.com/questions/8532406/create-a-random-token-in-javascript-based-on-user-details
+}
+
 function handleLogin(req, res) {
   const { email, password } = req.body;
 
   const authMessage = verificarCredenciais(email, password);
-  const token = '7mqaVRXJSp886CGr'; // token aleatório a cada vez que for acessado.
+  const token = generateToken(16);
   
   if (authMessage === 'pass') return res.status(200).send({ token });
   return res.status(400).send(authMessage);
