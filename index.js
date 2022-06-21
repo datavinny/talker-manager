@@ -17,31 +17,11 @@ app.get('/', (_request, response) => {
   });
 // GetAllTalkersRequest
 // PPC = Pessoas Palestrantes Cadastradas
-const arrPPC = [
-  { name: 'Henrique Albuquerque',
-    age: 62,
-    id: 1,
-    talk: { watchedAt: '23/10/2020', rate: 5 },
-  },
-  {
-    name: 'Heloísa Albuquerque',
-    age: 67,
-    id: 2,
-    talk: { watchedAt: '23/10/2020', rate: 5 },
-  },
-  {
-    name: 'Ricardo Xavier Filho',
-    age: 33,
-    id: 3,
-    talk: { watchedAt: '23/10/2020', rate: 5 },
-  },
-  {
-    name: 'Marcos Costa',
-    age: 24,
-    id: 4,
-    talk: { watchedAt: '23/10/2020', rate: 5 },
-  },
-];
+const fs = require('fs');
+
+const arrPPC = JSON.parse(fs.readFileSync('talker.json'));
+console.log(arrPPC);
+
 function handleGetAllTalkersRequest(req, res) {
   if (arrPPC.length === 0) return res.status(200).send([]);
   if (arrPPC) return res.status(200).send(arrPPC);
@@ -86,7 +66,6 @@ const verificarCredenciais = (email, password) => {
   return mensagensLogin[5];
 };
 
-const arrTokens = [];
 const generateToken = (n) => {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let token = '';
@@ -102,7 +81,6 @@ function handleLogin(req, res) {
 
   const authMessage = verificarCredenciais(email, password);
   const token = generateToken(16);
-  arrTokens.push(token);
   
   if (authMessage === 'pass') return res.status(200).send({ token });
   return res.status(400).send(authMessage);
@@ -111,18 +89,22 @@ function handleLogin(req, res) {
 app.post('/login', handleLogin);
 // endpoint POST /talker
 const mensagensTalker = {
-  1: { message: 'O "name" deve ter pelo menos 3 caracteres' },
-  2: { message: 'O campo "age" é obrigatório' },
-  3: { message: 'A pessoa palestrante deve ser maior de idade' },
-  4: { message: 'O campo "talk" é obrigatório' },
-  5: { message: 'O campo "watchedAt" é obrigatório' },
-  6: { message: 'O campo "watchedAt" deve ter o formato "dd/mm/aaaa"' },
-  7: { message: 'O campo "rate" é obrigatório' },
-  8: { message: 'O campo "rate" deve ser um inteiro de 1 à 5' },
+  1: 'O "name" deve ter pelo menos 3 caracteres',
+  2: 'O campo "age" é obrigatório',
+  3: 'A pessoa palestrante deve ser maior de idade',
+  4: 'O campo "talk" é obrigatório',
+  5: 'O campo "watchedAt" é obrigatório',
+  6: 'O campo "watchedAt" deve ter o formato "dd/mm/aaaa"',
+  7: 'O campo "rate" é obrigatório',
+  8: 'O campo "rate" deve ser um inteiro de 1 à 5',
   9: 'pass',
+  10: 'O campo "name" é obrigatório',
   };
   
   const verificarNameAndAge = (name, age) => {
+    if (name === undefined) {
+      return mensagensTalker[10];  
+    }
     if (name.length < 3) {
       return mensagensTalker[1];  
     }
@@ -132,6 +114,7 @@ const mensagensTalker = {
     if (age < 18) {
       return mensagensTalker[3];  
     }
+    return mensagensTalker[9];
   };
   const verificarTalk = (talk) => {
     if (talk === undefined) {
@@ -140,38 +123,44 @@ const mensagensTalker = {
     if (talk.watchedAt === undefined) {
       return mensagensTalker[5];  
     }
-    if (!talk.watchedAt.match(/^\d{1,2}-\d{4}-\d{1,2}$/)) {
+    if (talk.watchedAt.match(
+      '(((0[1-9])|([12][0-9])|(3[01]))/((0[0-9])|(1[012]))/((20[012]d|19dd)|(1d|2[0123])))',
+      ) === null) {
       return mensagensTalker[6];  
     }
+    return mensagensTalker[9];
   };
-  const verificarRate = (rate) => {
-    if (rate === undefined) {
+  const verificarRate = (talk) => {
+    if (typeof (talk.rate) !== 'number') {
       return mensagensTalker[7];  
     }
-    if (rate < 1 || rate > 5) {
+    if (talk.rate < 1 || talk.rate > 5) {
       return mensagensTalker[8];  
     }
+    return mensagensTalker[9];
   };
-  const verificarCredenciaisReq = (name, age, talk, rate) => {
-    if (verificarNameAndAge(name, age) !== null) return verificarNameAndAge(name, age);
-    if (verificarTalk(talk) !== null) return verificarTalk(talk);
-    if (verificarRate(rate) !== null) return verificarRate(rate);
+  const verificarCredenciaisReq = (name, age, talk) => {
+    if (verificarNameAndAge(name, age) !== 'pass') return verificarNameAndAge(name, age);
+    if (verificarTalk(talk) !== 'pass') return verificarTalk(talk);
+    if (verificarRate(talk) !== 'pass') return verificarRate(talk);
     return mensagensTalker[9];
   };
 
 function handleTalker(req, res) {
-  const { authorization } = req.headers;
-  const { id, name, age, talk, watchedAt, rate } = req.body;
-  if (authorization === undefined || null) {
+  const token = req.headers.authorization;
+  const { name, age, talk } = req.body;
+  if (token === undefined || token === null) {
     return res.status(401).send({ message: 'Token não encontrado' });
   }
-  if (arrTokens.find((t) => t === authorization) === false) {
+  if (token.length !== 16) {
     return res.status(401).send({ message: 'Token inválido' });
   }
-  const message = verificarCredenciaisReq(name, age, talk, rate);
+  const message = verificarCredenciaisReq(name, age, talk);
   if (message !== 'pass') return res.status(400).send({ message });
-  arrPPC.push({ id, name, age, talk: { watchedAt, rate } });
-  return res.status(201).send({ id, name, age, talk: { watchedAt, rate } });
+  const id = arrPPC.length + 1;
+  const newArr = [...arrPPC, { id, name, age, talk }];
+  fs.writeFileSync('./talker.json', JSON.stringify(newArr));
+  return res.status(201).send({ id, name, age, talk });
 }
 
 app.post('/talker', handleTalker);
