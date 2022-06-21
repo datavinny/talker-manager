@@ -146,17 +146,20 @@ const mensagensTalker = {
     return mensagensTalker[9];
   };
 
-function handleTalker(req, res) {
+function handleTalker(req, res) { 
   const token = req.headers.authorization;
   const { name, age, talk } = req.body;
+  // verifica token
   if (token === undefined || token === null) {
     return res.status(401).send({ message: 'Token não encontrado' });
   }
   if (token.length !== 16) {
     return res.status(401).send({ message: 'Token inválido' });
   }
+  // verifica name, age, talk da req
   const message = verificarCredenciaisReq(name, age, talk);
   if (message !== 'pass') return res.status(400).send({ message });
+  // reescreve o arquivo com a nova pessoa
   const id = arrPPC.length + 1;
   const newArr = [...arrPPC, { id, name, age, talk }];
   fs.writeFileSync('./talker.json', JSON.stringify(newArr));
@@ -164,3 +167,46 @@ function handleTalker(req, res) {
 }
 
 app.post('/talker', handleTalker);
+/// endpoint PUT /talker/:id
+function handleTalkerId(req, res) { 
+  const token = req.headers.authorization;
+  const { name, age, talk } = req.body;
+  const { id } = req.params;
+  // verifica token
+  if (token === undefined || token === null) {
+    return res.status(401).send({ message: 'Token não encontrado' });
+  }
+  if (token.length !== 16) {
+    return res.status(401).send({ message: 'Token inválido' });
+  }
+  // verifica name, age, talk da req
+  const message = verificarCredenciaisReq(name, age, talk);
+  if (message !== 'pass') return res.status(400).send({ message });
+  // reescreve o arquivo com a pessoa editada
+  const arrModificado = arrPPC.filter((p) => p.id !== id);
+  arrModificado.push({ id, name, age, talk });
+  fs.writeFileSync('./talker.json', JSON.stringify(arrModificado));
+  return res.status(200).send({ id, name, age, talk });
+}
+
+app.put('/talker/:id', handleTalkerId);
+// endpoint DELETE /talker/:id
+function handleDeleteTalkerId(req, res) { 
+  const token = req.headers.authorization;
+  const { id } = req.params;
+  // verifica token
+  if (token === undefined || token === null) {
+    return res.status(401).send({ message: 'Token não encontrado' });
+  }
+  if (token.length !== 16) {
+    return res.status(401).send({ message: 'Token inválido' });
+  }
+  // reescreve o arquivo removendo a pessoa com o id da rota
+  const pessoaIndex = arrPPC.findIndex((p) => p.id === Number(id));
+  // if (pessoaIndex === -1) return res.status(404).json({ message: 'Palestrante não encontrado!' });
+  fs.writeFileSync('./talker.json', JSON.stringify(arrPPC.splice(pessoaIndex, 1)));
+  res.status(204).end();
+  return res.status(204).send();
+}
+
+app.delete('/talker/:id', handleDeleteTalkerId);
