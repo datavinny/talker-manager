@@ -184,8 +184,7 @@ async function handleTalkerPost(req, res) {
 
   const data = await arrPPC();
   const id = data.length + 1;
-  const newArr = [...data, { id, name, age, talk }];
-  fs.writeFile('talker.json', JSON.stringify(newArr));
+  fs.writeFile('talker.json', JSON.stringify([...data, { id, name, age, talk }]));
   return res.status(201).send({ id, name, age, talk });
 }
 app.post('/talker', handleTalkerPost);
