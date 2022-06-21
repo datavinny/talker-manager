@@ -79,7 +79,6 @@ const mensagensLogin = {
 4: { message: 'O "password" deve ter pelo menos 6 caracteres' },
 5: 'pass',
 };
-
 const verificarCredenciais = (email, password) => {
   const mailformat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (email === undefined) {
@@ -96,7 +95,6 @@ const verificarCredenciais = (email, password) => {
   }
   return mensagensLogin[5];
 };
-
 const generateToken = (n) => {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let token = '';
@@ -106,7 +104,6 @@ const generateToken = (n) => {
   return token;
   // credits: https://stackoverflow.com/questions/8532406/create-a-random-token-in-javascript-based-on-user-details
 };
-
 function handleLogin(req, res) {
   const { email, password } = req.body;
 
@@ -175,7 +172,7 @@ const verificarCredenciaisReq = (name, age, talk) => {
     return mensagensTalker[9];
   };
 
-async function handleTalker(req, res) { 
+async function handleTalkerPost(req, res) { 
   const token = req.headers.authorization;
   const { name, age, talk } = req.body;
 
@@ -188,10 +185,10 @@ async function handleTalker(req, res) {
   const data = await arrPPC();
   const id = data.length + 1;
   const newArr = [...data, { id, name, age, talk }];
-  fs.writeFileSync('./talker.json', JSON.stringify(newArr));
+  fs.writeFile('talker.json', JSON.stringify(newArr));
   return res.status(201).send({ id, name, age, talk });
 }
-app.post('/talker', handleTalker);
+app.post('/talker', handleTalkerPost);
 /// endpoint PUT /talker/:id
 async function handleTalkerId(req, res) { 
   const token = req.headers.authorization;
@@ -208,7 +205,7 @@ async function handleTalkerId(req, res) {
   const pessoaIndex = data.findIndex((p) => p.id === Number(id));
   const arrModificado = data.splice(pessoaIndex, 1, { id: Number(id), name, age, talk });
 
-  fs.writeFileSync('./talker.json', JSON.stringify(arrModificado));
+  fs.writeFile('talker.json', JSON.stringify(arrModificado));
   
   return res.status(200).send({ id: Number(id), name, age, talk });
 }
@@ -223,7 +220,7 @@ async function handleDeleteTalkerId(req, res) {
 
   const data = await arrPPC();
   const pessoaIndex = data.findIndex((p) => p.id === Number(id));
-  fs.writeFileSync('./talker.json', JSON.stringify(data.splice(pessoaIndex, 1)));
+  fs.writeFile('talker.json', JSON.stringify(data.splice(pessoaIndex, 1)));
   return res.status(204).end();
 }
 app.delete('/talker/:id', handleDeleteTalkerId);
