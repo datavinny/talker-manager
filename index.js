@@ -47,14 +47,16 @@ async function handleGetAllTalkersRequest(req, res) {
 app.get('/talker', handleGetAllTalkersRequest);
 // endpoint GET /talker/search?q=searchTerm
 async function handleTalkerSearchTerm(req, res) { 
-  const { searchTerm } = req.params;
+  const { q } = req.query;
   const token = req.headers.authorization;
-  if (verificarToken(token) !== 'pass') return res.status(401).send(verificarToken(token));
+  
+  const message = verificarToken(token);
+  if (verificarToken(token) !== 'pass') return res.status(401).send({ message });
 
-  if (searchTerm === undefined) return res.status(200).send([]);
+  if (q === undefined) return res.status(200).send([]);
 
   const data = await arrPPC();
-  const pessoasEncontradas = data.filter((p) => p.name.includes(searchTerm));
+  const pessoasEncontradas = data.filter((p) => p.name.includes(q));
   if (pessoasEncontradas.length === 0) return res.status(200).send([]);
   return res.status(200).send(pessoasEncontradas);
 }
