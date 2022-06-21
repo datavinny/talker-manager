@@ -12,23 +12,48 @@ app.get('/', (_request, response) => {
   response.status(HTTP_OK_STATUS).send();
 });
 
-  app.listen(PORT, () => {
+app.listen(PORT, () => {
     console.log('Online');
-  });
-// GetAllTalkersRequest
-// PPC = Pessoas Palestrantes Cadastradas
+});
+//
 const fs = require('fs');
 
-const arrPPC = JSON.parse(fs.readFileSync('talker.json'));
-console.log(arrPPC);
+const arrPPC = JSON.parse(fs.readFileSync('./talker.json')); // PPC = Pessoas Palestrantes Cadastradas
 
+const mensagensToken = {
+  1: 'Token não encontrado',
+  2: 'Token inválido',
+  3: 'pass',
+};
+const verificarToken = (token) => {
+  if (token === undefined || token === null) {
+    return mensagensToken[1];
+  }
+  if (token.length !== 16) {
+    return mensagensToken[2];
+  }
+  return mensagensToken[3];
+};
+// endpoint GET /talker
 function handleGetAllTalkersRequest(req, res) {
-  if (arrPPC.length === 0) return res.status(200).send([]);
-  if (arrPPC) return res.status(200).send(arrPPC);
+  if (arrPPC.length > 0) return res.status(200).send(arrPPC);
+  return res.status(200).send([]);
 }
-
 app.get('/talker', handleGetAllTalkersRequest);
-// GetTalkerByIdRequest
+// endpoint GET /talker/search?q=searchTerm
+function handleTalkerSearchTerm(req, res) { 
+  const { searchTerm } = req.params;
+  const token = req.headers.authorization;
+  if (verificarToken(token) !== 'pass') return res.status(401).send(verificarToken(token));
+
+  if (searchTerm === undefined) return res.status(200).send([]);
+
+  const pessoasEncontradas = arrPPC.filter((p) => p.name.includes(searchTerm));
+  if (pessoasEncontradas.length === 0) return res.status(200).send([]);
+  return res.status(200).send(pessoasEncontradas);
+}
+app.get('/talker/search', handleTalkerSearchTerm);
+// endpoint GET /talker/:id
 function handleGetTalkerByIdRequest(req, res) {
   const { id } = req.params;
   const pessoa = arrPPC.find((p) => p.id === Number(id));
@@ -38,7 +63,6 @@ function handleGetTalkerByIdRequest(req, res) {
   return res.status(404).send({ message: 'Pessoa palestrante não encontrada' }); 
   }
 }
-
 app.get('/talker/:id', handleGetTalkerByIdRequest);
 // endpoint POST /login
 const mensagensLogin = {
@@ -85,7 +109,6 @@ function handleLogin(req, res) {
   if (authMessage === 'pass') return res.status(200).send({ token });
   return res.status(400).send(authMessage);
 }
-
 app.post('/login', handleLogin);
 // endpoint POST /talker
 const mensagensTalker = {
@@ -100,8 +123,7 @@ const mensagensTalker = {
   9: 'pass',
   10: 'O campo "name" é obrigatório',
   };
-  
-  const verificarNameAndAge = (name, age) => {
+const verificarNameAndAge = (name, age) => {
     if (name === undefined) {
       return mensagensTalker[10];  
     }
@@ -116,7 +138,7 @@ const mensagensTalker = {
     }
     return mensagensTalker[9];
   };
-  const verificarTalk = (talk) => {
+const verificarTalk = (talk) => {
     if (talk === undefined) {
       return mensagensTalker[4];  
     }
@@ -130,7 +152,7 @@ const mensagensTalker = {
     }
     return mensagensTalker[9];
   };
-  const verificarRate = (talk) => {
+const verificarRate = (talk) => {
     if (typeof (talk.rate) !== 'number') {
       return mensagensTalker[7];  
     }
@@ -139,7 +161,7 @@ const mensagensTalker = {
     }
     return mensagensTalker[9];
   };
-  const verificarCredenciaisReq = (name, age, talk) => {
+const verificarCredenciaisReq = (name, age, talk) => {
     if (verificarNameAndAge(name, age) !== 'pass') return verificarNameAndAge(name, age);
     if (verificarTalk(talk) !== 'pass') return verificarTalk(talk);
     if (verificarRate(talk) !== 'pass') return verificarRate(talk);
@@ -149,64 +171,49 @@ const mensagensTalker = {
 function handleTalker(req, res) { 
   const token = req.headers.authorization;
   const { name, age, talk } = req.body;
-  // verifica token
-  if (token === undefined || token === null) {
-    return res.status(401).send({ message: 'Token não encontrado' });
-  }
-  if (token.length !== 16) {
-    return res.status(401).send({ message: 'Token inválido' });
-  }
-  // verifica name, age, talk da req
+
+  const messageToken = verificarToken(token);
+  if (verificarToken(token) !== 'pass') return res.status(401).send({ message: messageToken });
+
   const message = verificarCredenciaisReq(name, age, talk);
-  if (message !== 'pass') return res.status(400).send({ message });
-  // reescreve o arquivo com a nova pessoa
+  if (verificarCredenciaisReq(name, age, talk) !== 'pass') return res.status(400).send({ message });
+
   const id = arrPPC.length + 1;
   const newArr = [...arrPPC, { id, name, age, talk }];
   fs.writeFileSync('./talker.json', JSON.stringify(newArr));
   return res.status(201).send({ id, name, age, talk });
 }
-
 app.post('/talker', handleTalker);
 /// endpoint PUT /talker/:id
 function handleTalkerId(req, res) { 
   const token = req.headers.authorization;
   const { name, age, talk } = req.body;
   const { id } = req.params;
-  // verifica token
-  if (token === undefined || token === null) {
-    return res.status(401).send({ message: 'Token não encontrado' });
-  }
-  if (token.length !== 16) {
-    return res.status(401).send({ message: 'Token inválido' });
-  }
-  // verifica name, age, talk da req
+
+  const messageToken = verificarToken(token);
+  if (verificarToken(token) !== 'pass') return res.status(401).send({ message: messageToken });
+
   const message = verificarCredenciaisReq(name, age, talk);
   if (message !== 'pass') return res.status(400).send({ message });
-  // reescreve o arquivo com a pessoa editada
-  const arrModificado = arrPPC.filter((p) => p.id !== id);
-  arrModificado.push({ id, name, age, talk });
-  fs.writeFileSync('./talker.json', JSON.stringify(arrModificado));
-  return res.status(200).send({ id, name, age, talk });
-}
 
+  const pessoaIndex = arrPPC.findIndex((p) => p.id === Number(id));
+  const arrModificado = arrPPC.splice(pessoaIndex, 1, { id: Number(id), name, age, talk });
+
+  fs.writeFileSync('./talker.json', JSON.stringify(arrModificado));
+  
+  return res.status(200).send({ id: Number(id), name, age, talk });
+}
 app.put('/talker/:id', handleTalkerId);
 // endpoint DELETE /talker/:id
 function handleDeleteTalkerId(req, res) { 
   const token = req.headers.authorization;
   const { id } = req.params;
-  // verifica token
-  if (token === undefined || token === null) {
-    return res.status(401).send({ message: 'Token não encontrado' });
-  }
-  if (token.length !== 16) {
-    return res.status(401).send({ message: 'Token inválido' });
-  }
-  // reescreve o arquivo removendo a pessoa com o id da rota
-  const pessoaIndex = arrPPC.findIndex((p) => p.id === Number(id));
-  // if (pessoaIndex === -1) return res.status(404).json({ message: 'Palestrante não encontrado!' });
-  fs.writeFileSync('./talker.json', JSON.stringify(arrPPC.splice(pessoaIndex, 1)));
-  res.status(204).end();
-  return res.status(204).send();
-}
+  
+  const messageToken = verificarToken(token);
+  if (verificarToken(token) !== 'pass') return res.status(401).send({ message: messageToken });
 
+  const pessoaIndex = arrPPC.findIndex((p) => p.id === Number(id));
+  fs.writeFileSync('./talker.json', JSON.stringify(arrPPC.splice(pessoaIndex, 1)));
+  return res.status(204).end();
+}
 app.delete('/talker/:id', handleDeleteTalkerId);
