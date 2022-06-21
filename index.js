@@ -214,12 +214,12 @@ async function handleDeleteTalkerId(req, res) {
   const token = req.headers.authorization;
   const { id } = req.params;
   
-  const messageToken = verificarToken(token);
-  if (verificarToken(token) !== 'pass') return res.status(401).send({ message: messageToken });
+  const message = verificarToken(token);
+  if (verificarToken(token) !== 'pass') return res.status(401).send({ message });
 
   const data = await arrPPC();
-  const pessoaIndex = data.findIndex((p) => p.id === Number(id));
-  fs.writeFile('talker.json', JSON.stringify(data.splice(pessoaIndex, 1)));
+  const newData = data.filter((p) => p.id !== Number(id));
+  fs.writeFile('talker.json', JSON.stringify(newData));
   return res.status(204).end();
 }
 app.delete('/talker/:id', handleDeleteTalkerId);
