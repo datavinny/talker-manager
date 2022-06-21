@@ -190,7 +190,7 @@ async function handleTalkerPost(req, res) {
 }
 app.post('/talker', handleTalkerPost);
 /// endpoint PUT /talker/:id
-async function handleTalkerId(req, res) { 
+async function handleTalkerPut(req, res) { 
   const token = req.headers.authorization;
   const { name, age, talk } = req.body;
   const { id } = req.params;
@@ -202,14 +202,14 @@ async function handleTalkerId(req, res) {
   if (message !== 'pass') return res.status(400).send({ message });
 
   const data = await arrPPC();
-  const pessoaIndex = data.findIndex((p) => p.id === Number(id));
-  const arrModificado = data.splice(pessoaIndex, 1, { id: Number(id), name, age, talk });
+  // const pessoaIndex = data.findIndex((p) => p.id === Number(id));
+  const arrModificado = data.splice(Number(id) - 1, 1, { id: Number(id), name, age, talk });
 
-  fs.writeFile('talker.json', JSON.stringify(arrModificado));
+  fs.writeFile('talker.json', JSON.stringify([...data, ...arrModificado]));
   
   return res.status(200).send({ id: Number(id), name, age, talk });
 }
-app.put('/talker/:id', handleTalkerId);
+app.put('/talker/:id', handleTalkerPut);
 // endpoint DELETE /talker/:id
 async function handleDeleteTalkerId(req, res) { 
   const token = req.headers.authorization;
