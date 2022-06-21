@@ -16,9 +16,11 @@ app.listen(PORT, () => {
     console.log('Online');
 });
 //
-const fs = require('fs');
+const fs = require('fs').promises;
 
-const arrPPC = JSON.parse(fs.readFileSync('./talker.json')); // PPC = Pessoas Palestrantes Cadastradas
+const arrPPC = () => fs.readFile('talker.json') // PPC = Pessoas Palestrantes Cadastradas
+  .then((data) => JSON.parse(data.toString()))
+  .catch((err) => err);
 
 const mensagensToken = {
   1: 'Token não encontrado',
@@ -35,28 +37,33 @@ const verificarToken = (token) => {
   return mensagensToken[3];
 };
 // endpoint GET /talker
-function handleGetAllTalkersRequest(req, res) {
-  if (arrPPC.length > 0) return res.status(200).send(arrPPC);
-  return res.status(200).send([]);
+async function handleGetAllTalkersRequest(req, res) {
+  const data = await arrPPC();
+  console.log(data);
+  // if (data.err) return res.status(500).send(data.err);
+  if (data.err) return res.status(200).send([]);
+  return res.status(200).send(data);
 }
 app.get('/talker', handleGetAllTalkersRequest);
 // endpoint GET /talker/search?q=searchTerm
-function handleTalkerSearchTerm(req, res) { 
+async function handleTalkerSearchTerm(req, res) { 
   const { searchTerm } = req.params;
   const token = req.headers.authorization;
   if (verificarToken(token) !== 'pass') return res.status(401).send(verificarToken(token));
 
   if (searchTerm === undefined) return res.status(200).send([]);
 
-  const pessoasEncontradas = arrPPC.filter((p) => p.name.includes(searchTerm));
+  const data = await arrPPC();
+  const pessoasEncontradas = data.filter((p) => p.name.includes(searchTerm));
   if (pessoasEncontradas.length === 0) return res.status(200).send([]);
   return res.status(200).send(pessoasEncontradas);
 }
 app.get('/talker/search', handleTalkerSearchTerm);
 // endpoint GET /talker/:id
-function handleGetTalkerByIdRequest(req, res) {
+async function handleGetTalkerByIdRequest(req, res) {
   const { id } = req.params;
-  const pessoa = arrPPC.find((p) => p.id === Number(id));
+  const data = await arrPPC();
+  const pessoa = data.find((p) => p.id === Number(id));
   
   if (pessoa !== undefined) return res.status(200).send(pessoa);
   if (pessoa === undefined) {
@@ -168,7 +175,7 @@ const verificarCredenciaisReq = (name, age, talk) => {
     return mensagensTalker[9];
   };
 
-function handleTalker(req, res) { 
+async function handleTalker(req, res) { 
   const token = req.headers.authorization;
   const { name, age, talk } = req.body;
 
@@ -178,14 +185,15 @@ function handleTalker(req, res) {
   const message = verificarCredenciaisReq(name, age, talk);
   if (verificarCredenciaisReq(name, age, talk) !== 'pass') return res.status(400).send({ message });
 
-  const id = arrPPC.length + 1;
-  const newArr = [...arrPPC, { id, name, age, talk }];
+  const data = await arrPPC();
+  const id = data.length + 1;
+  const newArr = [...data, { id, name, age, talk }];
   fs.writeFileSync('./talker.json', JSON.stringify(newArr));
   return res.status(201).send({ id, name, age, talk });
 }
 app.post('/talker', handleTalker);
 /// endpoint PUT /talker/:id
-function handleTalkerId(req, res) { 
+async function handleTalkerId(req, res) { 
   const token = req.headers.authorization;
   const { name, age, talk } = req.body;
   const { id } = req.params;
@@ -196,8 +204,9 @@ function handleTalkerId(req, res) {
   const message = verificarCredenciaisReq(name, age, talk);
   if (message !== 'pass') return res.status(400).send({ message });
 
-  const pessoaIndex = arrPPC.findIndex((p) => p.id === Number(id));
-  const arrModificado = arrPPC.splice(pessoaIndex, 1, { id: Number(id), name, age, talk });
+  const data = await arrPPC();
+  const pessoaIndex = data.findIndex((p) => p.id === Number(id));
+  const arrModificado = data.splice(pessoaIndex, 1, { id: Number(id), name, age, talk });
 
   fs.writeFileSync('./talker.json', JSON.stringify(arrModificado));
   
@@ -205,15 +214,16 @@ function handleTalkerId(req, res) {
 }
 app.put('/talker/:id', handleTalkerId);
 // endpoint DELETE /talker/:id
-function handleDeleteTalkerId(req, res) { 
+async function handleDeleteTalkerId(req, res) { 
   const token = req.headers.authorization;
   const { id } = req.params;
   
   const messageToken = verificarToken(token);
   if (verificarToken(token) !== 'pass') return res.status(401).send({ message: messageToken });
 
-  const pessoaIndex = arrPPC.findIndex((p) => p.id === Number(id));
-  fs.writeFileSync('./talker.json', JSON.stringify(arrPPC.splice(pessoaIndex, 1)));
+  const data = await arrPPC();
+  const pessoaIndex = data.findIndex((p) => p.id === Number(id));
+  fs.writeFileSync('./talker.json', JSON.stringify(data.splice(pessoaIndex, 1)));
   return res.status(204).end();
 }
 app.delete('/talker/:id', handleDeleteTalkerId);
