@@ -9,10 +9,5 @@
 ## :memo: Contexto
 Este projeto foi feito enquanto estudava na @betrybe.
 
-## 🗓 Data de entrega
-
-- Projeto individual;
-- Foram 3 dias de projeto;
-
 ## Creditos
 - Eu (@datavinny)
